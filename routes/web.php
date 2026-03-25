@@ -23,14 +23,14 @@ Route::get('/clear-session', function () {
 // Optional aliases for convenience
 // Route::get('/admin/login', [LoginController::class, 'showLoginForm']);
 // Route::get('/vendor/login', [LoginController::class, 'showLoginForm']);
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login']);
+// Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+// Route::post('/login', [LoginController::class, 'login']);
 Route::get('/admin/login', [LoginController::class, 'showLoginForm']);
 Route::get('/vendor/login', [LoginController::class, 'showLoginForm']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // POST login submission
-Route::post('/login', [LoginController::class, 'login']);
+Route::post('/login', [LoginController::class, 'login'])->name('login');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // ==================== PROTECTED ADMIN ROUTES ====================

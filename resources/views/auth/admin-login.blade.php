@@ -602,9 +602,9 @@
                         <label class="checkbox-label">
                             <input type="checkbox" name="remember"> Remember me
                         </label>
-                        <a href="{{ route('password.request') }}" class="forgot-link">
+                        {{--<a href="{{ route('password.request') }}" class="forgot-link">
                             Forgot Password?
-                        </a>
+                        </a>--}}
                     </div>
 
                     <button type="submit" class="login-btn" id="loginBtn">

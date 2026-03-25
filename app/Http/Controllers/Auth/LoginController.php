@@ -10,21 +10,20 @@ use Illuminate\Validation\ValidationException;
 class LoginController extends Controller
 {
     public function showLoginForm()
-{
-    
-    if (Auth::check()) {
-        $user = Auth::user();
-        if ($user->hasRole(['admin', 'super-admin'])) {
-            return redirect('/admin');
-        } elseif ($user->hasRole('vendor')) {
-            return redirect('/vendor');
+    {
+        
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user->hasRole(['admin', 'super-admin'])) {
+                return redirect('/admin');
+            } elseif ($user->hasRole('vendor')) {
+                return redirect('/vendor');
+            }
+            return redirect('/');
+           
         }
-        return redirect('/');
-       
+        return view('auth.admin-login');
     }
-    dd('showLoginForm');
-    return view('auth.admin-login');
-}
 
     public function login(Request $request)
     {
