@@ -15,20 +15,19 @@ return [
     |
     */
 
-    'paths' => ['*'],
+'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+'allowed_origins' => [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'http://localhost:56010',
+    'https://api.soskalifestyles.com'
+],
 
-    'allowed_origins' => ['*'],
+'allowed_methods' => ['*'],
 
-    'allowed_origins_patterns' => [],
+'allowed_headers' => ['*'],
 
-    'allowed_headers' => ['*'],
-
-    'exposed_headers' => [],
-
-    'max_age' => 0,
-
-    'supports_credentials' => false,
+'supports_credentials' => true,
 
 ];
