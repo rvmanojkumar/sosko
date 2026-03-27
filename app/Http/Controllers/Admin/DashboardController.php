@@ -21,7 +21,6 @@ class DashboardController extends Controller
         $pendingOrders = Order::where('order_status', 'placed')->count();
         $pendingVendors = VendorProfile::where('status', 'pending')->count();
 
-        // Monthly sales data for chart
         $monthlySales = Order::where('payment_status', 'paid')
             ->whereYear('created_at', now()->year)
             ->select(DB::raw('MONTH(created_at) as month'), DB::raw('SUM(total_amount) as total'))
@@ -35,8 +34,18 @@ class DashboardController extends Controller
         }
 
         $recentOrders = Order::with('user')->latest()->limit(10)->get();
-        $topProducts = Product::withCount('orderItems')
-            ->orderBy('order_items_count', 'desc')
+
+        $topProducts = DB::table('order_items')
+            ->join('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+            ->join('products', 'product_variants.product_id', '=', 'products.id')
+            ->select(
+                'products.id',
+                'products.name',
+                DB::raw('SUM(order_items.quantity) as total_quantity'),
+                DB::raw('SUM(order_items.total_price) as total_revenue')
+            )
+            ->groupBy('products.id', 'products.name')
+            ->orderBy('total_quantity', 'desc')
             ->limit(5)
             ->get();
 

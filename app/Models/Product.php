@@ -111,4 +111,18 @@ public function getUserReview($userId)
 {
     return $this->reviews()->where('user_id', $userId)->first();
 }
+/**
+     * Get the order items for this product
+     */
+    public function orderItems()
+    {
+        return $this->hasManyThrough(
+            OrderItem::class,
+            ProductVariant::class,
+            'product_id', // Foreign key on product_variants table
+            'product_variant_id', // Foreign key on order_items table
+            'id', // Local key on products table
+            'id' // Local key on product_variants table
+        );
+    }
 }
