@@ -528,9 +528,10 @@
             <div class="login-form">
                 <div class="logo-area">
                     <div class="logo-icon">
-                        <i class="fas fa-store"></i>
+                        <!-- <i class="fas fa-store"></i> -->
+                        <img src="logo.jpeg" alt="Logo" style="width:400% ">
                     </div>
-                    <div class="logo-text">{{ config('app.name') }}</div>
+                    <!-- <div class="logo-text">{{ config('app.name') }}</div> -->
                 </div>
 
                 <div class="welcome-text">
