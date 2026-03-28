@@ -12,6 +12,32 @@ use App\Helpers\StorageHelper;
 
 class CategoryController extends Controller
 {
+    public function index(Request $request)
+    {
+        $query = Category::query();
+
+        // Optional: filter active categories
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->is_active);
+        }
+
+        // Optional: filter parent categories only
+        if ($request->has('parent_only') && $request->parent_only) {
+            $query->whereNull('parent_id');
+        }
+
+        // Optional: include children (for tree structure)
+        if ($request->has('with_children') && $request->with_children) {
+            $query->with('children');
+        }
+
+        // Sorting (default by sort_order)
+        $query->orderBy('sort_order', 'asc');
+
+        $categories = $query->get();
+
+        return CategoryResource::collection($categories);
+    }
     public function store(Request $request)
     {
         $request->validate([
