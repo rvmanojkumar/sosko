@@ -17,12 +17,7 @@ return [
 
 'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-'allowed_origins' => [
-    'http://localhost:3000',
-    'http://localhost:8000',
-    'http://localhost:56010',
-    'https://api.soskalifestyles.com'
-],
+'allowed_origins' => ['*'],
 
 'allowed_methods' => ['*'],
 
