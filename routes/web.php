@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\VendorEarningController;
 use App\Http\Controllers\Admin\AttributeController;
+use App\Http\Controllers\Admin\AttributeGroupController;
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/', function () {
@@ -119,6 +120,8 @@ Route::middleware(['auth', 'role:admin|super-admin'])->prefix('admin')->name('ad
 
     // Categories
     Route::resource('categories', CategoryController::class);
+    Route::resource('attribute-groups', AttributeGroupController::class);
+
     
     // Promo Codes
     Route::resource('promo-codes', PromoCodeController::class);
