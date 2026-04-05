@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\VendorEarningController;
+use App\Http\Controllers\Admin\AttributeController;
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/', function () {
@@ -83,6 +84,8 @@ Route::middleware(['auth', 'role:admin|super-admin'])->prefix('admin')->name('ad
     Route::put('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
     Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage'])->name('products.delete-image');
+
+    Route::resource('attributes', AttributeController::class);
 
     // Orders
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
