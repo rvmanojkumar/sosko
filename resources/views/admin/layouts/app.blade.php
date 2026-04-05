@@ -74,7 +74,10 @@
         <a href="{{ route('admin.dashboard') }}" class="brand-link">
             <span class="brand-text font-weight-light">{{ config('app.name') }}</span>
         </a>
-
+        @php
+    $currentRoute = request()->path();
+        $menu = config('admin-menu.menu');
+    @endphp
         <div class="sidebar">
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
