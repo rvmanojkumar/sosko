@@ -10,11 +10,20 @@ use Illuminate\Support\Str;
 
 class AttributeGroupController extends Controller
 {
-    public function index()
-    {
-        $groups = AttributeGroup::withCount('attributes')->orderBy('sort_order')->get();
-        return view('admin.attribute-groups.index', compact('groups'));
-    }
+    public function index(Request $request)
+        {
+            $attributes = Attribute::with('values')
+                ->when($request->search, function($query, $search) {
+                    $query->where('name', 'like', "%{$search}%");
+                })
+                ->when($request->type, function($query, $type) {
+                    $query->where('type', $type);
+                })
+                ->orderBy('sort_order')
+                ->paginate(20);  // Changed from get() to paginate()
+
+            return view('admin.attributes.index', compact('attributes'));
+        }
 
     public function create()
     {
