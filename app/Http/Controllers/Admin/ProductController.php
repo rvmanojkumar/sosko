@@ -14,11 +14,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
-{
-    /**
-     * Display a listing of products
-     */
-    public function index(Request $request)
+    {
+        /**
+         * Display a listing of products
+         */
+        public function index(Request $request)
     {
         $products = Product::with(['vendor', 'category', 'variants', 'images'])
             ->when($request->search, function($query, $search) {
@@ -38,6 +38,7 @@ class ProductController extends Controller
             ->orderBy($request->sort ?? 'created_at', $request->order ?? 'desc')
             ->paginate(15);
 
+        // Make sure to handle null relationships in the view
         $categories = Category::where('is_active', true)->get();
         $vendors = User::whereHas('roles', fn($q) => $q->where('name', 'vendor'))->get();
 

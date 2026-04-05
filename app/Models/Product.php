@@ -1,3 +1,6 @@
+// app/Models/Product.php
+// Add these relationships to your Product model
+
 <?php
 
 namespace App\Models;
@@ -6,11 +9,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\Auditable; // Add this line
+use App\Traits\Auditable;
 
 class Product extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes, Auditable; // Add Auditable trait
+    use HasFactory, HasUuids, SoftDeletes, Auditable;
 
     protected $fillable = [
         'vendor_id', 'category_id', 'supplier_id', 'name', 'slug', 'description',
@@ -27,91 +30,100 @@ class Product extends Model
     ];
 
     /**
- * Get the reviews for this product
- */
-public function reviews()
-{
-    return $this->hasMany(ProductReview::class);
-}
-
-/**
- * Get approved reviews
- */
-public function approvedReviews()
-{
-    return $this->reviews()->where('is_approved', true);
-}
-
-/**
- * Get average rating
- */
-public function getAverageRatingAttribute()
-{
-    return $this->approvedReviews()->avg('rating') ?? 0;
-}
-
-/**
- * Get review count
- */
-public function getReviewCountAttribute()
-{
-    return $this->approvedReviews()->count();
-}
-
-/**
- * Get rating distribution
- */
-public function getRatingDistributionAttribute()
-{
-    $distribution = [];
-    
-    for ($i = 1; $i <= 5; $i++) {
-        $distribution[$i] = $this->approvedReviews()->where('rating', $i)->count();
+     * Get the vendor (user) that owns the product
+     */
+    public function vendor()
+    {
+        return $this->belongsTo(User::class, 'vendor_id');
     }
-    
-    return $distribution;
-}
 
-/**
- * Update product rating based on reviews
- */
-public function updateRating()
-{
-    // No need to store rating separately, use average_rating accessor
-    // This method exists for compatibility
-    return $this->average_rating;
-}
-
-/**
- * Get reviews with pagination
- */
-public function getReviews($perPage = 10, $rating = null)
-{
-    $query = $this->approvedReviews()->with(['user', 'media']);
-    
-    if ($rating) {
-        $query->where('rating', $rating);
+    /**
+     * Get the category that owns the product
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
-    
-    return $query->orderBy('created_at', 'desc')->paginate($perPage);
-}
 
-/**
- * Check if user has reviewed this product
- */
-public function hasUserReviewed($userId)
-{
-    return $this->reviews()->where('user_id', $userId)->exists();
-}
+    /**
+     * Get the supplier for the product
+     */
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
 
-/**
- * Get user's review for this product
- */
-public function getUserReview($userId)
-{
-    return $this->reviews()->where('user_id', $userId)->first();
-}
-/**
+    /**
+     * Get the variants for the product
+     */
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class);
+    }
+
+    /**
+     * Get the default variant
+     */
+    public function defaultVariant()
+    {
+        return $this->hasOne(ProductVariant::class)->where('is_default', true);
+    }
+
+    /**
+     * Get the images for the product
+     */
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get the reviews for the product
+     */
+    public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * Get approved reviews
+     */
+    public function approvedReviews()
+    {
+        return $this->reviews()->where('is_approved', true);
+    }
+
+    /**
+     * Get average rating
+     */
+    public function getAverageRatingAttribute()
+    {
+        return $this->approvedReviews()->avg('rating') ?? 0;
+    }
+
+    /**
+     * Get review count
+     */
+    public function getReviewCountAttribute()
+    {
+        return $this->approvedReviews()->count();
+    }
+
+    /**
+     * Get rating distribution
+     */
+    public function getRatingDistributionAttribute()
+    {
+        $distribution = [];
+        
+        for ($i = 1; $i <= 5; $i++) {
+            $distribution[$i] = $this->approvedReviews()->where('rating', $i)->count();
+        }
+        
+        return $distribution;
+    }
+
+    /**
      * Get the order items for this product
      */
     public function orderItems()
@@ -119,14 +131,26 @@ public function getUserReview($userId)
         return $this->hasManyThrough(
             OrderItem::class,
             ProductVariant::class,
-            'product_id', // Foreign key on product_variants table
-            'product_variant_id', // Foreign key on order_items table
-            'id', // Local key on products table
-            'id' // Local key on product_variants table
+            'product_id',
+            'product_variant_id',
+            'id',
+            'id'
         );
     }
-    public function defaultVariant()
-        {
-            return $this->hasOne(ProductVariant::class)->where('is_default', true);
-        }
+
+    /**
+     * Check if user has reviewed this product
+     */
+    public function hasUserReviewed($userId)
+    {
+        return $this->reviews()->where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Get user's review for this product
+     */
+    public function getUserReview($userId)
+    {
+        return $this->reviews()->where('user_id', $userId)->first();
+    }
 }
