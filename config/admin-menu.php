@@ -29,6 +29,7 @@ return [
         [
             'text' => 'Attributes',
             'icon' => 'cogs',
+            'active' => ['admin/attributes'],
             'submenu' => [
                 [
                     'text' => 'All Attributes',
