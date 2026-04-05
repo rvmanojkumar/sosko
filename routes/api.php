@@ -51,7 +51,7 @@ Route::prefix('v1')->group(function () {
     Route::get('categories/{category}/products', [CategoryController::class, 'products']);
     Route::get('categories/{category}/attributes', [CategoryAttributeController::class, 'index']);
     Route::get('categories/{category}/attribute-groups', [AttributeGroupController::class, 'getByCategory']);
-    
+    Route::get('categories/{category}/attributes', [App\Http\Controllers\Admin\CategoryController::class, 'getAttributes']);
     // Banners
     Route::get('banners', [BannerController::class, 'index']);
     
