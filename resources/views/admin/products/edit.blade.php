@@ -120,7 +120,7 @@
                     <div class="row mb-3">
                         @foreach($product->images as $image)
                             <div class="col-md-3 mb-2 position-relative" id="image-{{ $image->id }}">
-                                <img src="{{ Storage::url($image->image_path) }}" class="img-fluid rounded" style="height: 100px; object-fit: cover; width: 100%;">
+                                <img src="{{ Storage::disk('public')->url($image->image_path) }}" class="img-fluid rounded" style="height: 100px; object-fit: cover; width: 100%;">
                                 <button type="button" class="btn btn-sm btn-danger position-absolute" style="top: 5px; right: 15px;" onclick="deleteImage('{{ $image->id }}')">
                                     <i class="fas fa-times"></i>
                                 </button>
