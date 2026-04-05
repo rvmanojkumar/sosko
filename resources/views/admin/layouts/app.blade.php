@@ -78,66 +78,36 @@
         <div class="sidebar">
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
-                    <li class="nav-item">
-                        <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-tachometer-alt"></i>
-                            <p>Dashboard</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-box"></i>
-                            <p>Products</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-shopping-cart"></i>
-                            <p>Orders</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.vendors.index') }}" class="nav-link {{ request()->routeIs('admin.vendors.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-store"></i>
-                            <p>Vendors</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-users"></i>
-                            <p>Users</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-tags"></i>
-                            <p>Categories</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.promo-codes.index') }}" class="nav-link {{ request()->routeIs('admin.promo-codes.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-ticket-alt"></i>
-                            <p>Promo Codes</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.banners.index') }}" class="nav-link {{ request()->routeIs('admin.banners.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-image"></i>
-                            <p>Banners</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-star"></i>
-                            <p>Reviews</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.reports.index') }}" class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-chart-bar"></i>
-                            <p>Reports</p>
-                        </a>
-                    </li>
+                    @foreach($menu as $item)
+                        @if(isset($item['submenu']))
+                            <li class="nav-item has-treeview {{ Str::is($item['active'], $currentRoute) ? 'menu-open' : '' }}">
+                                <a href="#" class="nav-link {{ Str::is($item['active'], $currentRoute) ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-{{ $item['icon'] }}"></i>
+                                    <p>
+                                        {{ $item['text'] }}
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    @foreach($item['submenu'] as $subitem)
+                                        <li class="nav-item">
+                                            <a href="{{ url($subitem['url']) }}" class="nav-link {{ request()->is($subitem['active']) ? 'active' : '' }}">
+                                                <i class="fas fa-{{ $subitem['icon'] }} nav-icon"></i>
+                                                <p>{{ $subitem['text'] }}</p>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </li>
+                        @else
+                            <li class="nav-item">
+                                <a href="{{ url($item['url']) }}" class="nav-link {{ request()->is($item['active']) ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-{{ $item['icon'] }}"></i>
+                                    <p>{{ $item['text'] }}</p>
+                                </a>
+                            </li>
+                        @endif
+                    @endforeach
                 </ul>
             </nav>
         </div>
