@@ -265,15 +265,20 @@
                     _token: '{{ csrf_token() }}'
                 },
                 success: function(response) {
-                    $('#image-' + imageId).remove();
-                    toastr.success('Image deleted successfully');
+                    if (response.success) {
+                        $('#image-' + imageId).remove();
+                        toastr.success('Image deleted successfully');
+                    } else {
+                        toastr.error(response.message);
+                    }
                 },
-                error: function() {
+                error: function(xhr) {
                     toastr.error('Failed to delete image');
+                    console.log(xhr.responseJSON);
                 }
-            });
-        }
+        });
     }
+}
 </script>
 @endpush
 @endsection

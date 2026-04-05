@@ -82,7 +82,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->prefix('admin')->name('ad
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::put('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
-    Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage'])->name('admin.products.delete-image');
+    Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage'])->name('products.delete-image');
 
     // Orders
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
