@@ -125,4 +125,8 @@ public function getUserReview($userId)
             'id' // Local key on product_variants table
         );
     }
+    public function defaultVariant()
+        {
+            return $this->hasOne(ProductVariant::class)->where('is_default', true);
+        }
 }

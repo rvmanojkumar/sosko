@@ -18,7 +18,7 @@ use App\Models\WalletTransaction;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasUuids, SoftDeletes, HasRoles, Auditable;
-    protected $guard_name = 'api'; // 
+    protected $guard_name = 'api'; //
     protected $fillable = [
         'name',
         'email',

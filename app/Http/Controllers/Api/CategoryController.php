@@ -13,7 +13,7 @@ use App\Helpers\StorageHelper;
 class CategoryController extends Controller
 {
     public function index(Request $request)
-    {git 
+    {
         $query = Category::query();
 
         // Optional: filter active categories

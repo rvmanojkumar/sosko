@@ -11,6 +11,7 @@ use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -59,84 +60,97 @@ class ProductController extends Controller
      * Store a newly created product
      */
     public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'short_description' => 'nullable|string|max:500',
-            'category_id' => 'required|exists:categories,id',
-            'vendor_id' => 'required|exists:users,id',
-            'brand' => 'nullable|string|max:100',
-            'weight' => 'nullable|numeric',
-            'specifications' => 'nullable|array',
-            'price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0|lt:price',
-            'stock_quantity' => 'required|integer|min:0',
-            'sku' => 'required|string|unique:product_variants,sku',
-            'is_featured' => 'boolean',
-            'is_active' => 'boolean',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+{
+    // Debug: Log the incoming request
+    Log::info('=== PRODUCT CREATION ATTEMPT ===');
+    Log::info('Form data:', $request->except('_token'));
+    Log::info('Has files: ' . ($request->hasFile('images') ? 'Yes' : 'No'));
+    
+    // Validate
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'required|string',
+        'short_description' => 'nullable|string|max:500',
+        'category_id' => 'required|exists:categories,id',
+        'vendor_id' => 'required|exists:users,id',
+        'brand' => 'nullable|string|max:100',
+        'weight' => 'nullable|numeric',
+        'specifications' => 'nullable|array',
+        'price' => 'required|numeric|min:0',
+        'sale_price' => 'nullable|numeric|min:0|lt:price',
+        'stock_quantity' => 'required|integer|min:0',
+        'sku' => 'required|string|unique:product_variants,sku',
+        'is_featured' => 'boolean',
+        'is_active' => 'boolean',
+        'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+    ]);
+
+    Log::info('Validation passed');
+
+    try {
+        // Create product
+        $product = Product::create([
+            'vendor_id' => $request->vendor_id,
+            'category_id' => $request->category_id,
+            'name' => $request->name,
+            'slug' => Str::slug($request->name) . '-' . Str::random(6),
+            'description' => $request->description,
+            'short_description' => $request->short_description,
+            'brand' => $request->brand,
+            'weight' => $request->weight,
+            'specifications' => $request->specifications,
+            'is_featured' => $request->is_featured ?? false,
+            'is_active' => $request->is_active ?? true,
+            'seo_data' => $request->seo_data,
         ]);
 
-        try {
-            // Create product
-            $product = Product::create([
-                'vendor_id' => $request->vendor_id,
-                'category_id' => $request->category_id,
-                'name' => $request->name,
-                'slug' => Str::slug($request->name) . '-' . Str::random(6),
-                'description' => $request->description,
-                'short_description' => $request->short_description,
-                'brand' => $request->brand,
-                'weight' => $request->weight,
-                'specifications' => $request->specifications,
-                'is_featured' => $request->is_featured ?? false,
-                'is_active' => $request->is_active ?? true,
-                'seo_data' => $request->seo_data,
-            ]);
+        Log::info('Product created', ['product_id' => $product->id]);
 
-            // Create product variant
-            $variant = ProductVariant::create([
-                'product_id' => $product->id,
-                'sku' => $request->sku,
-                'price' => $request->price,
-                'sale_price' => $request->sale_price,
-                'discount_percent' => $request->sale_price ? round((($request->price - $request->sale_price) / $request->price) * 100, 2) : 0,
-                'stock_quantity' => $request->stock_quantity,
-                'low_stock_threshold' => $request->low_stock_threshold ?? 5,
-                'weight' => $request->weight,
-                'is_default' => true,
-                'is_active' => true,
-            ]);
+        // Create variant
+        $variant = ProductVariant::create([
+            'product_id' => $product->id,
+            'sku' => $request->sku,
+            'price' => $request->price,
+            'sale_price' => $request->sale_price,
+            'discount_percent' => $request->sale_price ? round((($request->price - $request->sale_price) / $request->price) * 100, 2) : 0,
+            'stock_quantity' => $request->stock_quantity,
+            'low_stock_threshold' => $request->low_stock_threshold ?? 5,
+            'weight' => $request->weight,
+            'is_default' => true,
+            'is_active' => true,
+        ]);
 
-            // Attach attribute values if any
-            if ($request->has('attribute_values') && is_array($request->attribute_values)) {
-                $variant->attributeValues()->sync($request->attribute_values);
+        Log::info('Variant created', ['variant_id' => $variant->id]);
+
+        // Upload images
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                $path = $image->store('products/' . $product->id, 'public');
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $path,
+                    'sort_order' => $index,
+                    'is_primary' => $index === 0,
+                    'alt_text' => $product->name,
+                ]);
             }
-
-            // Upload images
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $index => $image) {
-                    $path = $image->store('products/' . $product->id, 'public');
-                    ProductImage::create([
-                        'product_id' => $product->id,
-                        'image_path' => $path,
-                        'sort_order' => $index,
-                        'is_primary' => $index === 0,
-                        'alt_text' => $product->name,
-                    ]);
-                }
-            }
-
-            return redirect()->route('admin.products.index')
-                ->with('success', 'Product created successfully.');
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Error creating product: ' . $e->getMessage())
-                ->withInput();
+            Log::info('Images uploaded', ['count' => count($request->file('images'))]);
         }
+
+        return redirect()->route('admin.products.index')
+            ->with('success', 'Product created successfully.');
+
+    } catch (\Exception $e) {
+        Log::error('Product creation failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return redirect()->back()
+            ->with('error', 'Error creating product: ' . $e->getMessage())
+            ->withInput();
     }
+}
 
     /**
      * Display the specified product
