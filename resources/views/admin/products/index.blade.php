@@ -64,7 +64,7 @@
                     <td>{{ $product->id }}</td>
                     <td>
                         @if($product->images->first())
-                            <img src="{{ Storage::url($product->images->first()->image_path) }}" width="50" height="50" style="object-fit: cover; border-radius: 4px;">
+                            <img src="{{ Storage::disk('public')->url($product->images->first()->image_path) }}">width="50" height="50" style="object-fit: cover; border-radius: 4px;">
                         @else
                             <div class="bg-secondary text-white text-center" style="width: 50px; height: 50px; line-height: 50px; border-radius: 4px;">
                                 <i class="fas fa-image"></i>
