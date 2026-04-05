@@ -1,6 +1,3 @@
-// app/Models/Product.php
-// Add these relationships to your Product model
-
 <?php
 
 namespace App\Models;
