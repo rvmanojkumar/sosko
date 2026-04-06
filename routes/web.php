@@ -121,6 +121,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->prefix('admin')->name('ad
     // Categories
     Route::resource('categories', CategoryController::class);
     Route::resource('attribute-groups', AttributeGroupController::class);
+    Route::get('categories/{category}/attributes', [App\Http\Controllers\Api\CategoryController::class, 'getAttributes']);
 
     
     // Promo Codes

@@ -143,4 +143,18 @@ class CategoryController extends Controller
         return response()->json(['message' => 'Category deleted successfully']);
 
     }
+    public function getAttributes(Category $category)
+    {
+        $attributes = $category->attributes()
+            ->with(['values' => function($query) {
+                $query->orderBy('sort_order');
+            }])
+            ->orderBy('pivot_sort_order')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $attributes
+        ]);
+    }   
 }
