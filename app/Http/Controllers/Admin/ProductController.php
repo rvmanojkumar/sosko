@@ -60,15 +60,8 @@ class ProductController extends Controller
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'vendor_id' => 'required|exists:users,id',
-            'brand' => 'nullable|string',
-            'variants' => 'required|array|min:1',
-            'variants.*.sku' => 'required|string|distinct',
-            'variants.*.price' => 'required|numeric|min:0',
-            'variants.*.stock' => 'required|integer|min:0',
             'images.*' => 'nullable|image|max:5120',
         ]);
-
-        DB::beginTransaction();
 
         try {
             // Create product
@@ -80,23 +73,39 @@ class ProductController extends Controller
                 'description' => $request->description,
                 'short_description' => $request->short_description,
                 'brand' => $request->brand,
-                'is_active' => true,
+                'weight' => $request->weight,
+                'specifications' => $request->specifications,
+                'is_featured' => $request->is_featured ?? false,
+                'is_active' => $request->is_active ?? true,
+                'seo_data' => $request->seo_data,
             ]);
 
-            // Create variants
-            foreach ($request->variants as $index => $variantData) {
-                $variant = ProductVariant::create([
-                    'product_id' => $product->id,
-                    'sku' => $variantData['sku'],
-                    'price' => $variantData['price'],
-                    'sale_price' => $variantData['sale_price'] ?? null,
-                    'stock_quantity' => $variantData['stock'],
-                    'is_default' => $index === 0,
-                ]);
-
-                // Attach attribute values
-                if (isset($variantData['attribute_values'])) {
-                    $variant->attributeValues()->sync($variantData['attribute_values']);
+            // Handle variants
+            if ($request->has('variants')) {
+                foreach ($request->variants as $variantData) {
+                    if (isset($variantData['sku']) && !empty($variantData['sku'])) {
+                        $sku = $variantData['sku'];
+                        
+                        // Fix invalid SKU
+                        if ($sku === 'JEWELLERY_-' || $sku === '' || $sku === '-') {
+                            $sku = strtoupper(Str::random(10));
+                        }
+                        
+                        $variant = ProductVariant::create([
+                            'product_id' => $product->id,
+                            'sku' => $sku,
+                            'price' => $variantData['price'],
+                            'sale_price' => $variantData['sale_price'] ?? null,
+                            'stock_quantity' => $variantData['stock'],
+                            'is_default' => false,
+                            'is_active' => true,
+                        ]);
+                        
+                        // Sync attribute values
+                        if (isset($variantData['attribute_values'])) {
+                            $variant->attributeValues()->sync($variantData['attribute_values']);
+                        }
+                    }
                 }
             }
 
@@ -109,17 +118,15 @@ class ProductController extends Controller
                         'image_path' => $path,
                         'sort_order' => $index,
                         'is_primary' => $index === 0,
+                        'alt_text' => $product->name,
                     ]);
                 }
             }
-
-            DB::commit();
 
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product created successfully.');
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return redirect()->back()
                 ->with('error', 'Error creating product: ' . $e->getMessage())
                 ->withInput();
@@ -221,17 +228,34 @@ public function update(Request $request, Product $product)
                     }
                 }
 
+                // Track processed SKUs to avoid duplicates
+                $processedSkus = [];
+                
                 // Update or create variants
                 foreach ($request->variants as $variantData) {
                     if (isset($variantData['sku']) && !empty($variantData['sku'])) {
+                        $sku = $variantData['sku'];
+                        
+                        // Fix invalid SKU
+                        if ($sku === 'JEWELLERY_-' || $sku === '' || $sku === '-') {
+                            $sku = strtoupper(Str::random(10));
+                        }
+                        
+                        // Ensure SKU is unique within this update
+                        if (in_array($sku, $processedSkus)) {
+                            $sku = $sku . '-' . rand(100, 999);
+                        }
+                        $processedSkus[] = $sku;
+                        
                         $variant = ProductVariant::updateOrCreate(
                             ['id' => $variantData['id'] ?? null, 'product_id' => $product->id],
                             [
-                                'sku' => $variantData['sku'],
+                                'sku' => $sku,
                                 'price' => $variantData['price'],
                                 'sale_price' => $variantData['sale_price'] ?? null,
                                 'stock_quantity' => $variantData['stock'],
                                 'is_default' => false,
+                                'is_active' => true,
                             ]
                         );
                         
