@@ -152,35 +152,30 @@ class ProductController extends Controller
     /**
      * Update the specified product
      */
-    public function update(Request $request, Product $product)
+    // app/Http/Controllers/Admin/ProductController.php
+// Update the update method
+
+public function update(Request $request, Product $product)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string',
-            'short_description' => 'nullable|string|max:500',
             'category_id' => 'required|exists:categories,id',
             'vendor_id' => 'required|exists:users,id',
-            'brand' => 'nullable|string|max:100',
-            'weight' => 'nullable|numeric',
-            'specifications' => 'nullable|array',
             'price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0|lt:price',
             'stock_quantity' => 'required|integer|min:0',
             'sku' => 'required|string|unique:product_variants,sku,' . ($product->variants->first()->id ?? ''),
-            'is_featured' => 'boolean',
-            'is_active' => 'boolean',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+            'new_images.*' => 'nullable|image|max:5120',
         ]);
 
         try {
             // Update product
             $product->update([
-                'vendor_id' => $request->vendor_id,
-                'category_id' => $request->category_id,
                 'name' => $request->name,
-                'slug' => $request->name !== $product->name ? Str::slug($request->name) . '-' . Str::random(6) : $product->slug,
                 'description' => $request->description,
                 'short_description' => $request->short_description,
+                'category_id' => $request->category_id,
+                'vendor_id' => $request->vendor_id,
                 'brand' => $request->brand,
                 'weight' => $request->weight,
                 'specifications' => $request->specifications,
@@ -189,34 +184,32 @@ class ProductController extends Controller
                 'seo_data' => $request->seo_data,
             ]);
 
-            // Update or create variant
-            $variant = $product->variants()->first();
-            if ($variant) {
-                $variant->update([
-                    'sku' => $request->sku,
-                    'price' => $request->price,
-                    'sale_price' => $request->sale_price,
-                    'discount_percent' => $request->sale_price ? round((($request->price - $request->sale_price) / $request->price) * 100, 2) : 0,
-                    'stock_quantity' => $request->stock_quantity,
-                    'low_stock_threshold' => $request->low_stock_threshold ?? 5,
-                    'weight' => $request->weight,
-                ]);
-
-                // Update attribute values
-                if ($request->has('attribute_values')) {
-                    $variant->attributeValues()->sync($request->attribute_values);
+            // Delete marked images
+            if ($request->has('deleted_images')) {
+                foreach ($request->deleted_images as $imageId) {
+                    $image = ProductImage::find($imageId);
+                    if ($image && $image->product_id == $product->id) {
+                        if (Storage::disk('public')->exists($image->image_path)) {
+                            Storage::disk('public')->delete($image->image_path);
+                        }
+                        $image->delete();
+                    }
                 }
             }
 
+            // Handle variants
+            // ... existing variant update code ...
+
             // Upload new images
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $index => $image) {
+            if ($request->hasFile('new_images')) {
+                $imageCount = $product->images()->count();
+                foreach ($request->file('new_images') as $index => $image) {
                     $path = $image->store('products/' . $product->id, 'public');
                     ProductImage::create([
                         'product_id' => $product->id,
                         'image_path' => $path,
-                        'sort_order' => $product->images()->count(),
-                        'is_primary' => false,
+                        'sort_order' => $imageCount + $index,
+                        'is_primary' => $imageCount === 0 && $index === 0,
                         'alt_text' => $product->name,
                     ]);
                 }
