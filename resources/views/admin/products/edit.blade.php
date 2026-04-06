@@ -69,8 +69,8 @@
         margin-top: 20px;
     }
     .upload-box {
-        width: 100px;
-        height: 100px;
+        width: 120px;
+        height: 120px;
         background: #F3F4F6;
         border-radius: 8px;
         display: flex;
@@ -80,25 +80,25 @@
         cursor: pointer;
         border: 2px dashed #D1D5DB;
         transition: all 0.3s;
+        margin-bottom: 15px;
     }
     .upload-box:hover {
         border-color: #2980B9;
         background: #EBF5FB;
     }
-    .image-preview {
+    .image-preview-container {
         position: relative;
         display: inline-block;
-        margin-right: 12px;
-        margin-bottom: 12px;
+        margin: 5px;
     }
-    .image-preview img {
-        width: 80px;
-        height: 80px;
+    .image-preview-container img {
+        width: 100px;
+        height: 100px;
         object-fit: cover;
         border-radius: 8px;
         border: 1px solid #E5E7EB;
     }
-    .image-preview .remove-image {
+    .remove-image-btn {
         position: absolute;
         top: -8px;
         right: -8px;
@@ -106,8 +106,8 @@
         color: white;
         border: none;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         font-size: 12px;
         cursor: pointer;
         display: flex;
@@ -124,10 +124,18 @@
         padding: 2px 6px;
         border-radius: 4px;
     }
-    .image-container {
-        position: relative;
-        display: inline-block;
-        margin: 5px;
+    .existing-images-section, .new-images-section {
+        margin-bottom: 20px;
+    }
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #374151;
+    }
+    .images-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
     }
 </style>
 
@@ -184,7 +192,7 @@
                         <label>Description *</label>
                         <textarea name="description" id="description" class="form-control @error('description') is-invalid @enderror" rows="4" required>{{ old('description', $product->description) }}</textarea>
                         @error('description')
-                            <span class="invalid-feedback">{{ $message }}</span>
+                            <span class="invalid-feedback">{{ $message}}</span>
                         @enderror
                     </div>
 
@@ -299,26 +307,34 @@
             <div class="card">
                 <div class="card-header">Product Images</div>
                 <div class="card-body">
-                    <div id="existingImages" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-                        @foreach($product->images as $image)
-                        <div class="image-container" data-image-id="{{ $image->id }}">
-                            <div class="image-preview">
+                    <!-- Existing Images -->
+                    @if($product->images->count() > 0)
+                    <div class="existing-images-section">
+                        <div class="section-title">Current Images</div>
+                        <div class="images-grid" id="existingImagesGrid">
+                            @foreach($product->images as $image)
+                            <div class="image-preview-container existing-image" data-image-id="{{ $image->id }}">
                                 <img src="{{ Storage::url($image->image_path) }}" alt="Product Image">
-                                <button type="button" class="remove-image" data-id="{{ $image->id }}">×</button>
+                                <button type="button" class="remove-image-btn remove-existing-image" data-id="{{ $image->id }}">×</button>
                                 @if($image->is_primary)
                                     <div class="primary-badge">Primary</div>
                                 @endif
                             </div>
+                            @endforeach
                         </div>
-                        @endforeach
                     </div>
-                    
-                    <div class="upload-box" onclick="document.getElementById('imageInput').click()">
-                        <span style="font-size: 32px;">📷</span>
-                        <span style="font-size: 12px;">Add More Images</span>
+                    @endif
+
+                    <!-- New Images Upload -->
+                    <div class="new-images-section">
+                        <div class="section-title">Add New Images</div>
+                        <div class="upload-box" onclick="document.getElementById('imageInput').click()">
+                            <span style="font-size: 32px;">📷</span>
+                            <span style="font-size: 12px;">Click to Upload</span>
+                        </div>
+                        <input type="file" name="images[]" id="imageInput" class="d-none" multiple accept="image/*">
+                        <div id="newImagesPreview" class="images-grid" style="margin-top: 15px;"></div>
                     </div>
-                    <input type="file" name="new_images[]" id="imageInput" class="d-none" multiple accept="image/*">
-                    <div id="newImagePreview" class="mt-3" style="display: flex; flex-wrap: wrap; gap: 12px;"></div>
                     <small class="text-muted mt-2 d-block">You can upload multiple images. First image will be primary.</small>
                 </div>
             </div>
@@ -357,30 +373,28 @@ let selectedAttributes = {};
 let variantCounter = {{ $product->variants->count() }};
 
 $(document).ready(function() {
+    // Load category attributes
     $('#categorySelect').change(function() {
         loadCategoryAttributes($(this).val());
     });
     
-    // Load attributes if category is already selected
     if ($('#categorySelect').val()) {
         loadCategoryAttributes($('#categorySelect').val());
     }
     
-    // New image preview
+    // Image upload preview
     $('#imageInput').on('change', function(e) {
         const files = e.target.files;
-        const preview = $('#newImagePreview');
-        preview.empty();
+        const previewContainer = $('#newImagesPreview');
+        previewContainer.empty();
         
         for (let i = 0; i < files.length; i++) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                preview.append(`
-                    <div class="image-container new-image" data-temp-index="${i}">
-                        <div class="image-preview">
-                            <img src="${e.target.result}" alt="New Image">
-                            <button type="button" class="remove-new-image" data-index="${i}">×</button>
-                        </div>
+                previewContainer.append(`
+                    <div class="image-preview-container new-image" data-temp-index="${i}">
+                        <img src="${e.target.result}" alt="New Image">
+                        <button type="button" class="remove-image-btn remove-new-image" data-index="${i}">×</button>
                     </div>
                 `);
             }
@@ -411,8 +425,8 @@ $(document).ready(function() {
         });
     });
     
-    // Remove existing image
-    $(document).on('click', '.remove-image', function() {
+    // Remove existing image (mark for deletion)
+    $(document).on('click', '.remove-existing-image', function() {
         const imageId = $(this).data('id');
         if (confirm('Are you sure you want to delete this image?')) {
             // Add hidden input to mark for deletion
@@ -422,8 +436,8 @@ $(document).ready(function() {
                 value: imageId
             }).appendTo('#productForm');
             
-            $(this).closest('.image-container').remove();
-            toastr.success('Image will be deleted on save');
+            $(this).closest('.existing-image').remove();
+            toastr.success('Image marked for deletion');
         }
     });
     
@@ -432,7 +446,6 @@ $(document).ready(function() {
         const row = $(this).closest('tr');
         const variantId = row.data('variant-id');
         if (variantId) {
-            // Add hidden input to mark for deletion
             $('<input>').attr({
                 type: 'hidden',
                 name: 'deleted_variants[]',
@@ -464,7 +477,6 @@ $(document).ready(function() {
     // Clear all variants
     $('#clearVariantsBtn').click(function() {
         if (confirm('Are you sure you want to clear all variants?')) {
-            // Mark existing variants for deletion
             $('#variantsBody tr').each(function() {
                 const variantId = $(this).data('variant-id');
                 if (variantId) {
@@ -519,7 +531,6 @@ function loadCategoryAttributes(categoryId) {
             if (response.data && response.data.length > 0) {
                 displayAttributes(response.data);
                 $('#attributesCard').show();
-                loadExistingVariants();
             } else {
                 $('#attributesCard').hide();
                 showSimpleVariantForm();
@@ -621,7 +632,6 @@ function generateVariantTable(combinations, attributeNames) {
     const tbody = $('#variantsBody');
     const productName = $('#productName').val() || 'PRODUCT';
     
-    // Header
     let headerHtml = '<tr><th style="width: 40px;">#</th>';
     attributeNames.forEach(attr => {
         headerHtml += `<th>${attr}</th>`;
@@ -629,13 +639,12 @@ function generateVariantTable(combinations, attributeNames) {
     headerHtml += '<th>SKU</th><th>Price (₹)</th><th>Sale Price (₹)</th><th>Stock</th><th style="width: 50px;">Actions</th></tr>';
     thead.html(headerHtml);
     
-    // Body
     tbody.empty();
     combinations.forEach((combo, index) => {
         const attrCode = combo.map(c => c.value.name.substring(0, 3).toUpperCase()).join('-');
         const defaultSKU = `${productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10)}-${attrCode}`;
         
-        let rowHtml = `<tr data-combination='${JSON.stringify(combo)}'>`;
+        let rowHtml = `<tr>`;
         rowHtml += `<td><strong>${index + 1}</strong></td>`;
         
         attributeNames.forEach(attr => {
@@ -651,7 +660,6 @@ function generateVariantTable(combinations, attributeNames) {
             <td><button type="button" class="btn btn-danger btn-sm delete-variant"><i class="fas fa-trash"></i></button></td>
         `;
         
-        // Add hidden fields for attribute values
         combo.forEach(c => {
             rowHtml += `<input type="hidden" name="variants[${variantCounter}][attribute_values][]" value="${c.value.id}">`;
         });
@@ -700,11 +708,6 @@ function updateVariantNumbers() {
     $('#variantsBody tr').each(function(index) {
         $(this).find('td:first').html(`<strong>${index + 1}</strong>`);
     });
-}
-
-function loadExistingVariants() {
-    // Existing variants are already in the table
-    // This function can be used to update attribute displays if needed
 }
 </script>
 @endpush

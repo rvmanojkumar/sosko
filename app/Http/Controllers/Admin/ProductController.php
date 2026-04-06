@@ -162,14 +162,11 @@ public function update(Request $request, Product $product)
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'vendor_id' => 'required|exists:users,id',
-            'price' => 'required|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
-            'sku' => 'required|string|unique:product_variants,sku,' . ($product->variants->first()->id ?? ''),
-            'new_images.*' => 'nullable|image|max:5120',
+            'images.*' => 'nullable|image|max:5120',
         ]);
 
         try {
-            // Update product
+            // Update product basic info
             $product->update([
                 'name' => $request->name,
                 'description' => $request->description,
@@ -197,21 +194,52 @@ public function update(Request $request, Product $product)
                 }
             }
 
-            // Handle variants
-            // ... existing variant update code ...
-
             // Upload new images
-            if ($request->hasFile('new_images')) {
-                $imageCount = $product->images()->count();
-                foreach ($request->file('new_images') as $index => $image) {
+            if ($request->hasFile('images')) {
+                $currentImageCount = $product->images()->count();
+                foreach ($request->file('images') as $index => $image) {
                     $path = $image->store('products/' . $product->id, 'public');
                     ProductImage::create([
                         'product_id' => $product->id,
                         'image_path' => $path,
-                        'sort_order' => $imageCount + $index,
-                        'is_primary' => $imageCount === 0 && $index === 0,
+                        'sort_order' => $currentImageCount + $index,
+                        'is_primary' => $currentImageCount === 0 && $index === 0,
                         'alt_text' => $product->name,
                     ]);
+                }
+            }
+
+            // Handle variants update
+            if ($request->has('variants')) {
+                // Delete marked variants
+                if ($request->has('deleted_variants')) {
+                    foreach ($request->deleted_variants as $variantId) {
+                        $variant = ProductVariant::find($variantId);
+                        if ($variant && $variant->product_id == $product->id) {
+                            $variant->delete();
+                        }
+                    }
+                }
+
+                // Update or create variants
+                foreach ($request->variants as $variantData) {
+                    if (isset($variantData['sku']) && !empty($variantData['sku'])) {
+                        $variant = ProductVariant::updateOrCreate(
+                            ['id' => $variantData['id'] ?? null, 'product_id' => $product->id],
+                            [
+                                'sku' => $variantData['sku'],
+                                'price' => $variantData['price'],
+                                'sale_price' => $variantData['sale_price'] ?? null,
+                                'stock_quantity' => $variantData['stock'],
+                                'is_default' => false,
+                            ]
+                        );
+                        
+                        // Sync attribute values
+                        if (isset($variantData['attribute_values'])) {
+                            $variant->attributeValues()->sync($variantData['attribute_values']);
+                        }
+                    }
                 }
             }
 
