@@ -60,32 +60,13 @@
         border: 1px solid #D1D5DB;
         border-radius: 6px;
     }
-    .variant-card {
-        background: #F9FAFB;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-        position: relative;
-        border: 1px solid #E5E7EB;
-    }
-    .variant-card-header {
+    .action-buttons {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #E5E7EB;
-    }
-    .variant-title {
-        font-weight: 600;
-        color: #1F2937;
-    }
-    .variant-badge {
-        background: #2980B9;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 20px;
-        font-size: 11px;
+        gap: 12px;
+        justify-content: flex-end;
+        padding-top: 20px;
+        border-top: 1px solid #E5E7EB;
+        margin-top: 20px;
     }
     .upload-box {
         width: 100px;
@@ -103,14 +84,6 @@
     .upload-box:hover {
         border-color: #2980B9;
         background: #EBF5FB;
-    }
-    .action-buttons {
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-        padding-top: 20px;
-        border-top: 1px solid #E5E7EB;
-        margin-top: 20px;
     }
     .image-preview {
         position: relative;
@@ -141,8 +114,20 @@
         align-items: center;
         justify-content: center;
     }
-    .btn-icon {
-        padding: 6px 12px;
+    .primary-badge {
+        position: absolute;
+        bottom: -20px;
+        left: 5px;
+        font-size: 10px;
+        background: #2980B9;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .image-container {
+        position: relative;
+        display: inline-block;
+        margin: 5px;
     }
 </style>
 
@@ -316,26 +301,29 @@
                 <div class="card-body">
                     <div id="existingImages" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                         @foreach($product->images as $image)
-                        <div class="image-preview" data-image-id="{{ $image->id }}">
-                            <img src="{{ Storage::url($image->image_path) }}" alt="Product Image">
-                            <button type="button" class="remove-image" data-id="{{ $image->id }}">×</button>
-                            @if($image->is_primary)
-                                <span class="badge badge-primary" style="position: absolute; bottom: -20px; left: 5px;">Primary</span>
-                            @endif
+                        <div class="image-container" data-image-id="{{ $image->id }}">
+                            <div class="image-preview">
+                                <img src="{{ Storage::url($image->image_path) }}" alt="Product Image">
+                                <button type="button" class="remove-image" data-id="{{ $image->id }}">×</button>
+                                @if($image->is_primary)
+                                    <div class="primary-badge">Primary</div>
+                                @endif
+                            </div>
                         </div>
                         @endforeach
                     </div>
+                    
                     <div class="upload-box" onclick="document.getElementById('imageInput').click()">
                         <span style="font-size: 32px;">📷</span>
-                        <span style="font-size: 12px;">Upload Image</span>
+                        <span style="font-size: 12px;">Add More Images</span>
                     </div>
-                    <input type="file" name="images[]" id="imageInput" class="d-none" multiple accept="image/*">
+                    <input type="file" name="new_images[]" id="imageInput" class="d-none" multiple accept="image/*">
                     <div id="newImagePreview" class="mt-3" style="display: flex; flex-wrap: wrap; gap: 12px;"></div>
                     <small class="text-muted mt-2 d-block">You can upload multiple images. First image will be primary.</small>
                 </div>
             </div>
 
-            <!-- SEO Card -->
+            <!-- SEO Information Card -->
             <div class="card">
                 <div class="card-header">SEO Information</div>
                 <div class="card-body">
@@ -351,11 +339,6 @@
                     <div class="form-group">
                         <label>Meta Keywords</label>
                         <input type="text" name="seo_data[meta_keywords]" class="form-control" value="{{ old('seo_data.meta_keywords', $seoData['meta_keywords'] ?? '') }}">
-                    </div>
-                    <div class="form-group">
-                        <label>Slug</label>
-                        <input type="text" name="slug" class="form-control" value="{{ $product->slug }}" readonly disabled>
-                        <small class="text-muted">Auto-generated from product name</small>
                     </div>
                 </div>
             </div>
@@ -383,7 +366,7 @@ $(document).ready(function() {
         loadCategoryAttributes($('#categorySelect').val());
     }
     
-    // Image preview
+    // New image preview
     $('#imageInput').on('change', function(e) {
         const files = e.target.files;
         const preview = $('#newImagePreview');
@@ -393,9 +376,11 @@ $(document).ready(function() {
             const reader = new FileReader();
             reader.onload = function(e) {
                 preview.append(`
-                    <div class="image-preview new-image">
-                        <img src="${e.target.result}" alt="New Image">
-                        <button type="button" class="remove-new-image">×</button>
+                    <div class="image-container new-image" data-temp-index="${i}">
+                        <div class="image-preview">
+                            <img src="${e.target.result}" alt="New Image">
+                            <button type="button" class="remove-new-image" data-index="${i}">×</button>
+                        </div>
                     </div>
                 `);
             }
@@ -405,32 +390,56 @@ $(document).ready(function() {
     
     // Remove new image preview
     $(document).on('click', '.remove-new-image', function() {
-        $(this).closest('.image-preview').remove();
-        $('#imageInput').val('');
+        const index = $(this).data('index');
+        $(`.new-image[data-temp-index="${index}"]`).remove();
+        
+        // Clear the file from input
+        const input = $('#imageInput')[0];
+        const dt = new DataTransfer();
+        const files = input.files;
+        for (let i = 0; i < files.length; i++) {
+            if (i != index) {
+                dt.items.add(files[i]);
+            }
+        }
+        input.files = dt.files;
+        
+        // Renumber remaining previews
+        $('.new-image').each(function(newIndex) {
+            $(this).attr('data-temp-index', newIndex);
+            $(this).find('.remove-new-image').data('index', newIndex);
+        });
     });
     
     // Remove existing image
     $(document).on('click', '.remove-image', function() {
         const imageId = $(this).data('id');
         if (confirm('Are you sure you want to delete this image?')) {
-            $.ajax({
-                url: '{{ route("admin.products.delete-image", ["product" => $product->id, "image" => ":imageId"]) }}'.replace(':imageId', imageId),
-                method: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function(response) {
-                    $(`.image-preview[data-image-id="${imageId}"]`).remove();
-                    toastr.success('Image deleted successfully');
-                },
-                error: function() {
-                    toastr.error('Failed to delete image');
-                }
-            });
+            // Add hidden input to mark for deletion
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'deleted_images[]',
+                value: imageId
+            }).appendTo('#productForm');
+            
+            $(this).closest('.image-container').remove();
+            toastr.success('Image will be deleted on save');
         }
     });
     
     // Delete variant
     $(document).on('click', '.delete-variant', function() {
-        $(this).closest('tr').remove();
+        const row = $(this).closest('tr');
+        const variantId = row.data('variant-id');
+        if (variantId) {
+            // Add hidden input to mark for deletion
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'deleted_variants[]',
+                value: variantId
+            }).appendTo('#productForm');
+        }
+        row.remove();
         updateVariantNumbers();
         if ($('#variantsBody tr').length === 0) {
             $('#variantsTable').hide();
@@ -455,6 +464,17 @@ $(document).ready(function() {
     // Clear all variants
     $('#clearVariantsBtn').click(function() {
         if (confirm('Are you sure you want to clear all variants?')) {
+            // Mark existing variants for deletion
+            $('#variantsBody tr').each(function() {
+                const variantId = $(this).data('variant-id');
+                if (variantId) {
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'deleted_variants[]',
+                        value: variantId
+                    }).appendTo('#productForm');
+                }
+            });
             $('#variantsBody').empty();
             $('#variantsTable').hide();
             $('#noVariantsMsg').show();
@@ -469,8 +489,8 @@ $(document).ready(function() {
         const rows = $('#variantsBody tr');
         rows.each(function(index) {
             const cells = $(this).find('td');
-            const skuInput = cells.eq(cells.length - 5).find('input');
-            if (skuInput && !skuInput.val()) {
+            const skuInput = cells.eq(cells.length - 5).find('input.sku-input');
+            if (skuInput && (!skuInput.val() || skuInput.val() === '')) {
                 let attrValues = [];
                 for (let i = 1; i < cells.length - 5; i++) {
                     const text = cells.eq(i).text().trim();
@@ -519,7 +539,6 @@ function displayAttributes(attributes) {
     selectedAttributes = {};
 
     attributes.forEach(attr => {
-        const isSelected = false;
         const html = `
             <div class="form-group attribute-section">
                 <label>${attr.name} ${attr.is_required ? '*' : ''}</label>
@@ -653,7 +672,7 @@ function addManualVariantRow() {
     
     let rowHtml = `<tr>
         <td><strong>${rowCount}</strong></td>
-        <td><input type="text" placeholder="Color/Size/etc" class="form-control form-control-sm" style="width: 100px;"></td>
+        <td><input type="text" placeholder="Attribute" class="form-control form-control-sm" style="width: 100px;"></td>
         <td><input type="text" placeholder="Value" class="form-control form-control-sm" style="width: 100px;"></td>
         <td><input type="text" name="variants[${variantCounter}][sku]" class="form-control form-control-sm sku-input" style="width: 140px;" placeholder="SKU" required></td>
         <td><input type="number" name="variants[${variantCounter}][price]" class="form-control form-control-sm price-input" style="width: 100px;" step="0.01" placeholder="Price" required></td>
@@ -670,8 +689,7 @@ function addManualVariantRow() {
 }
 
 function showSimpleVariantForm() {
-    const tbody = $('#variantsBody');
-    if (tbody.children().length === 0) {
+    if ($('#variantsBody tr').length === 0) {
         addManualVariantRow();
     }
     $('#variantsTable').show();
