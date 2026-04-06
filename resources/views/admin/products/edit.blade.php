@@ -54,7 +54,7 @@
         font-size: 13px;
         color: #6B7280;
     }
-    .variants-table td input {
+    .variants-table td input, .variants-table td select {
         width: 100%;
         padding: 6px 10px;
         border: 1px solid #D1D5DB;
@@ -143,6 +143,16 @@
         border: 1px solid #D1D5DB;
         border-radius: 6px;
         font-size: 13px;
+    }
+    .editable-attribute {
+        background: #FFF8E1;
+    }
+    .attribute-value-display {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #E3F2FD;
+        border-radius: 4px;
+        font-size: 12px;
     }
 </style>
 
@@ -261,16 +271,18 @@
                                             @php
                                                 $selectedValue = $variant->attributeValues->firstWhere('attribute_id', $attribute->id);
                                             @endphp
-                                            @if($attribute->type == 'color')
-                                                <div class="color-value" style="display: flex; align-items: center; gap: 8px;">
-                                                    <div style="width: 24px; height: 24px; background: {{ $selectedValue->color_code ?? '#ccc' }}; border-radius: 50%; border: 1px solid #ddd;"></div>
-                                                    <span>{{ $selectedValue->value ?? '-' }}</span>
-                                                </div>
-                                                <input type="hidden" name="variants[{{ $variantIndex }}][attribute_values][]" value="{{ $selectedValue->id ?? '' }}">
-                                            @else
-                                                <span class="attribute-value-display">{{ $selectedValue->value ?? '-' }}</span>
-                                                <input type="hidden" name="variants[{{ $variantIndex }}][attribute_values][]" value="{{ $selectedValue->id ?? '' }}">
-                                            @endif
+                                            <select name="variants[{{ $variantIndex }}][attribute_values][]" class="variant-attribute-select" data-attr-id="{{ $attribute->id }}" required>
+                                                <option value="">Select {{ $attribute->name }}</option>
+                                                @foreach($attribute->values as $value)
+                                                    <option value="{{ $value->id }}" 
+                                                        data-value-name="{{ $value->value }}"
+                                                        data-color-code="{{ $value->color_code }}"
+                                                        {{ $selectedValue && $selectedValue->id == $value->id ? 'selected' : '' }}>
+                                                        {{ $value->value }}
+                                                        @if($value->color_code) ({{ $value->color_code }}) @endif
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </td>
                                     @endforeach
                                     <td><input type="text" name="variants[{{ $variantIndex }}][sku]" value="{{ $variant->sku }}" class="form-control form-control-sm sku-input" style="width: 140px;" required></td>
@@ -348,7 +360,7 @@
 
             <!-- SEO Information Card -->
             <div class="card">
-                <div class="card-header">SEO Information</div>
+                <div class-card-header">SEO Information</div>
                 <div class="card-body">
                     @php $seoData = $product->seo_data ?? []; @endphp
                     <div class="form-group">
@@ -505,7 +517,6 @@ $(document).ready(function() {
         const baseSku = productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10);
         const existingSkus = new Set();
         
-        // Collect existing SKUs from current rows
         $('#variantsBody tr').each(function() {
             const skuInput = $(this).find('.sku-input');
             if (skuInput.val()) {
@@ -526,12 +537,6 @@ $(document).ready(function() {
                         const code = selectedOption.text().substring(0, 3).toUpperCase();
                         if (code) attrValues.push(code);
                     }
-                } else {
-                    const text = cells.eq(i).text().trim();
-                    if (text && text !== '-') {
-                        const code = text.substring(0, 3).toUpperCase();
-                        if (code) attrValues.push(code);
-                    }
                 }
             }
             
@@ -542,7 +547,6 @@ $(document).ready(function() {
                 newSku = `${baseSku}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
             }
             
-            // Ensure uniqueness
             let finalSku = newSku;
             let counter = 1;
             while (existingSkus.has(finalSku)) {
@@ -704,7 +708,10 @@ function generateVariantTable(combinations, attributeNames) {
         
         attributeNames.forEach(attr => {
             const value = combo.find(c => c.attribute === attr)?.value.name || '-';
-            rowHtml += `<td>${value}</td>`;
+            rowHtml += `<td><select class="variant-attribute-select" data-attr-name="${attr}" required>
+                <option value="">Select ${attr}</option>
+                ${selectedAttributes[attr].map(v => `<option value="${v.id}" ${v.name === value ? 'selected' : ''}>${v.name}</option>`).join('')}
+            </select></td>`;
         });
         
         rowHtml += `
@@ -750,10 +757,10 @@ function addManualVariantRow() {
     // Create attribute select dropdowns based on available attributes
     let attributeCells = '';
     if (availableAttributes.length > 0) {
-        availableAttributes.forEach(attr => {
+        availableAttributes.forEach((attr, attrIndex) => {
             attributeCells += `
                 <td>
-                    <select class="variant-attribute-select manual-attr-select" data-attr-name="${attr.name}" data-attr-id="${attr.id}">
+                    <select class="variant-attribute-select manual-attr-select" data-attr-id="${attr.id}" data-attr-name="${attr.name}" data-attr-index="${attrIndex}">
                         <option value="">Select ${attr.name}</option>
                         ${attr.values.map(v => `<option value="${v.id}" data-value-name="${v.value}">${v.value}</option>`).join('')}
                     </select>
@@ -783,14 +790,15 @@ function addManualVariantRow() {
     if (availableAttributes.length > 0) {
         const row = tbody.children().last();
         row.find('.manual-attr-select').each(function() {
+            const attrId = $(this).data('attr-id');
+            const attrIndex = $(this).data('attr-index');
             $(this).on('change', function() {
                 const selectedOption = $(this).find('option:selected');
                 const valueId = $(this).val();
-                const attrId = $(this).data('attr-id');
                 if (valueId) {
-                    let hiddenInput = row.find(`input[data-attr-id="${attrId}"]`);
+                    let hiddenInput = row.find(`input[data-attr-index="${attrIndex}"]`);
                     if (hiddenInput.length === 0) {
-                        hiddenInput = $(`<input type="hidden" name="variants[${variantCounter}][attribute_values][]" value="${valueId}" data-attr-id="${attrId}">`);
+                        hiddenInput = $(`<input type="hidden" name="variants[${variantCounter}][attribute_values][]" value="${valueId}" data-attr-index="${attrIndex}">`);
                         row.append(hiddenInput);
                     } else {
                         hiddenInput.val(valueId);
