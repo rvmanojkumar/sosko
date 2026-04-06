@@ -57,7 +57,6 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>&nbsp;</label>
                                 <div class="custom-control custom-switch">
                                     <input type="checkbox" name="is_required" class="custom-control-input" id="is_required" value="1" {{ old('is_required') ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="is_required">Required attribute</label>
@@ -95,7 +94,7 @@
             </div>
             <div class="card-body">
                 <div id="valuesContainer">
-                    <table class="table table-bordered" id="valuesTable">
+                    <table class="table table-bordered" id="valuesTable" style="display: none;">
                         <thead>
                             <tr>
                                 <th>Value</th>
@@ -105,7 +104,7 @@
                             </tr>
                         </thead>
                         <tbody id="valuesBody"></tbody>
-                    ?</table>
+                    </table>
                 </div>
                 <div id="noValuesMsg" class="alert alert-info text-center">
                     <i class="fas fa-info-circle"></i> No values added yet. Click "Add Value" to add attribute options.
@@ -118,8 +117,8 @@
                 <h3 class="card-title">Preview</h3>
             </div>
             <div class="card-body">
-                <div id="previewContainer">
-                    <div class="text-muted text-center">Select type to see preview</div>
+                <div id="previewContainer" class="text-center text-muted">
+                    Select attribute values to see preview
                 </div>
             </div>
         </div>
@@ -157,7 +156,7 @@ $(document).ready(function() {
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
-            </table>
+            </tr>
         `;
         
         $('#valuesBody').append(row);
@@ -175,46 +174,72 @@ $(document).ready(function() {
         updatePreview();
     });
     
-    // Update preview when type changes
-    $('#type, #display_type').on('change', updatePreview);
-    $(document).on('change', 'input[name*="[value]"]', updatePreview);
+    // Update preview when type changes or values change
+    $('#type, #display_type').on('change', function() {
+        updatePreview();
+    });
+    
+    // Listen for value input changes
+    $(document).on('change keyup', 'input[name*="[value]"]', function() {
+        updatePreview();
+    });
     
     function updatePreview() {
         const type = $('#type').val();
         const displayType = $('#display_type').val();
         const values = [];
         
+        // Safely collect values
         $('input[name*="[value]"]').each(function() {
             const val = $(this).val();
-            if (val) values.push(val);
+            if (val && val.trim() !== '') {
+                values.push(val.trim());
+            }
         });
         
         let previewHtml = '';
         
-        if (type === 'color') {
-            previewHtml = '<div class="attribute-options d-flex flex-wrap gap-2">';
+        if (values.length === 0) {
+            previewHtml = '<div class="text-muted text-center">Add values to see preview</div>';
+        } else if (type === 'color') {
+            previewHtml = '<div class="d-flex flex-wrap gap-2" style="gap: 10px;">';
             values.forEach(value => {
-                previewHtml += `<div class="color-swatch" style="width: 40px; height: 40px; background: #ccc; border-radius: 50%; margin: 5px;"></div>`;
+                previewHtml += `<div class="color-swatch" style="width: 40px; height: 40px; background: #ccc; border-radius: 50%; border: 1px solid #ddd;" title="${value}"></div>`;
             });
             previewHtml += '</div>';
         } else if (displayType === 'button') {
-            previewHtml = '<div class="d-flex flex-wrap gap-2">';
+            previewHtml = '<div class="d-flex flex-wrap gap-2" style="gap: 8px;">';
             values.forEach(value => {
-                previewHtml += `<button class="btn btn-outline-secondary btn-sm" style="margin: 5px;">${value}</button>`;
+                previewHtml += `<button class="btn btn-outline-secondary btn-sm" style="margin: 0;" disabled>${escapeHtml(value)}</button>`;
             });
             previewHtml += '</div>';
         } else if (displayType === 'dropdown') {
-            previewHtml = '<select class="form-control"><option>Select option</option>';
+            previewHtml = `<select class="form-control" disabled style="max-width: 200px;">
+                <option>Select option</option>`;
             values.forEach(value => {
-                previewHtml += `<option>${value}</option>`;
+                previewHtml += `<option>${escapeHtml(value)}</option>`;
             });
             previewHtml += '</select>';
         } else {
             previewHtml = '<div class="text-muted">Preview not available for this configuration</div>';
         }
         
-        $('#previewContainer').html(previewHtml || '<div class="text-muted text-center">Add values to see preview</div>');
+        $('#previewContainer').html(previewHtml);
     }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    
+    // Initialize preview
+    updatePreview();
 });
 </script>
 @endpush
