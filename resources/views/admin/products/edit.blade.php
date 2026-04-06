@@ -137,6 +137,13 @@
         flex-wrap: wrap;
         gap: 15px;
     }
+    .variant-attribute-select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #D1D5DB;
+        border-radius: 6px;
+        font-size: 13px;
+    }
 </style>
 
 <form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data" id="productForm">
@@ -371,6 +378,7 @@
 <script>
 let selectedAttributes = {};
 let variantCounter = {{ $product->variants->count() }};
+let availableAttributes = [];
 
 $(document).ready(function() {
     // Load category attributes
@@ -407,7 +415,6 @@ $(document).ready(function() {
         const index = $(this).data('index');
         $(`.new-image[data-temp-index="${index}"]`).remove();
         
-        // Clear the file from input
         const input = $('#imageInput')[0];
         const dt = new DataTransfer();
         const files = input.files;
@@ -418,7 +425,6 @@ $(document).ready(function() {
         }
         input.files = dt.files;
         
-        // Renumber remaining previews
         $('.new-image').each(function(newIndex) {
             $(this).attr('data-temp-index', newIndex);
             $(this).find('.remove-new-image').data('index', newIndex);
@@ -429,13 +435,11 @@ $(document).ready(function() {
     $(document).on('click', '.remove-existing-image', function() {
         const imageId = $(this).data('id');
         if (confirm('Are you sure you want to delete this image?')) {
-            // Add hidden input to mark for deletion
             $('<input>').attr({
                 type: 'hidden',
                 name: 'deleted_images[]',
                 value: imageId
             }).appendTo('#productForm');
-            
             $(this).closest('.existing-image').remove();
             toastr.success('Image marked for deletion');
         }
@@ -495,24 +499,58 @@ $(document).ready(function() {
         }
     });
     
-    // Auto-generate SKUs
+    // Auto-generate SKUs with duplicate check
     $('#autoSkuBtn').click(function() {
         const productName = $('#productName').val() || 'PRODUCT';
-        const rows = $('#variantsBody tr');
-        rows.each(function(index) {
+        const baseSku = productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10);
+        const existingSkus = new Set();
+        
+        // Collect existing SKUs from current rows
+        $('#variantsBody tr').each(function() {
+            const skuInput = $(this).find('.sku-input');
+            if (skuInput.val()) {
+                existingSkus.add(skuInput.val());
+            }
+        });
+        
+        $('#variantsBody tr').each(function() {
             const cells = $(this).find('td');
-            const skuInput = cells.eq(cells.length - 5).find('input.sku-input');
-            if (skuInput && (!skuInput.val() || skuInput.val() === '')) {
-                let attrValues = [];
-                for (let i = 1; i < cells.length - 5; i++) {
+            const skuInput = cells.eq(cells.length - 5).find('.sku-input');
+            let attrValues = [];
+            
+            for (let i = 1; i < cells.length - 5; i++) {
+                const select = cells.eq(i).find('select');
+                if (select.length) {
+                    const selectedOption = select.find('option:selected');
+                    if (selectedOption.val() && selectedOption.val() !== '') {
+                        const code = selectedOption.text().substring(0, 3).toUpperCase();
+                        if (code) attrValues.push(code);
+                    }
+                } else {
                     const text = cells.eq(i).text().trim();
                     if (text && text !== '-') {
-                        attrValues.push(text.substring(0, 3).toUpperCase());
+                        const code = text.substring(0, 3).toUpperCase();
+                        if (code) attrValues.push(code);
                     }
                 }
-                const attrCode = attrValues.join('-');
-                skuInput.val(`${productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10)}-${attrCode}`);
             }
+            
+            let newSku = baseSku;
+            if (attrValues.length > 0) {
+                newSku = `${baseSku}-${attrValues.join('-')}`;
+            } else {
+                newSku = `${baseSku}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            }
+            
+            // Ensure uniqueness
+            let finalSku = newSku;
+            let counter = 1;
+            while (existingSkus.has(finalSku)) {
+                finalSku = `${newSku}-${counter}`;
+                counter++;
+            }
+            existingSkus.add(finalSku);
+            skuInput.val(finalSku);
         });
     });
 });
@@ -529,6 +567,7 @@ function loadCategoryAttributes(categoryId) {
         method: 'GET',
         success: function(response) {
             if (response.data && response.data.length > 0) {
+                availableAttributes = response.data;
                 displayAttributes(response.data);
                 $('#attributesCard').show();
             } else {
@@ -631,6 +670,13 @@ function generateVariantTable(combinations, attributeNames) {
     const thead = $('#variantsHeader');
     const tbody = $('#variantsBody');
     const productName = $('#productName').val() || 'PRODUCT';
+    const baseSku = productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10);
+    const existingSkus = new Set();
+    
+    $('#variantsBody tr').each(function() {
+        const sku = $(this).find('.sku-input').val();
+        if (sku) existingSkus.add(sku);
+    });
     
     let headerHtml = '<tr><th style="width: 40px;">#</th>';
     attributeNames.forEach(attr => {
@@ -641,8 +687,17 @@ function generateVariantTable(combinations, attributeNames) {
     
     tbody.empty();
     combinations.forEach((combo, index) => {
-        const attrCode = combo.map(c => c.value.name.substring(0, 3).toUpperCase()).join('-');
-        const defaultSKU = `${productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10)}-${attrCode}`;
+        let attrCode = combo.map(c => c.value.name.substring(0, 3).toUpperCase()).join('-');
+        if (attrCode === '') attrCode = 'VAR';
+        
+        let newSku = `${baseSku}-${attrCode}`;
+        let finalSku = newSku;
+        let counter = 1;
+        while (existingSkus.has(finalSku)) {
+            finalSku = `${newSku}-${counter}`;
+            counter++;
+        }
+        existingSkus.add(finalSku);
         
         let rowHtml = `<tr>`;
         rowHtml += `<td><strong>${index + 1}</strong></td>`;
@@ -653,7 +708,7 @@ function generateVariantTable(combinations, attributeNames) {
         });
         
         rowHtml += `
-            <td><input type="text" name="variants[${variantCounter}][sku]" value="${defaultSKU}" class="form-control form-control-sm sku-input" style="width: 140px;" required></td>
+            <td><input type="text" name="variants[${variantCounter}][sku]" value="${finalSku}" class="form-control form-control-sm sku-input" style="width: 140px;" required></td>
             <td><input type="number" name="variants[${variantCounter}][price]" value="999" class="form-control form-control-sm price-input" style="width: 100px;" step="0.01" required></td>
             <td><input type="number" name="variants[${variantCounter}][sale_price]" class="form-control form-control-sm sale-price-input" style="width: 100px;" step="0.01" placeholder="Optional"></td>
             <td><input type="number" name="variants[${variantCounter}][stock]" value="0" class="form-control form-control-sm stock-input" style="width: 80px;" required></td>
@@ -677,12 +732,45 @@ function generateVariantTable(combinations, attributeNames) {
 function addManualVariantRow() {
     const tbody = $('#variantsBody');
     const rowCount = tbody.children().length + 1;
+    const productName = $('#productName').val() || 'PRODUCT';
+    const baseSku = productName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10);
+    const existingSkus = new Set();
+    
+    $('#variantsBody tr').each(function() {
+        const sku = $(this).find('.sku-input').val();
+        if (sku) existingSkus.add(sku);
+    });
+    
+    let uniqueSku = `${baseSku}-MANUAL-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    while (existingSkus.has(uniqueSku)) {
+        uniqueSku = `${baseSku}-MANUAL-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    }
+    existingSkus.add(uniqueSku);
+    
+    // Create attribute select dropdowns based on available attributes
+    let attributeCells = '';
+    if (availableAttributes.length > 0) {
+        availableAttributes.forEach(attr => {
+            attributeCells += `
+                <td>
+                    <select class="variant-attribute-select manual-attr-select" data-attr-name="${attr.name}" data-attr-id="${attr.id}">
+                        <option value="">Select ${attr.name}</option>
+                        ${attr.values.map(v => `<option value="${v.id}" data-value-name="${v.value}">${v.value}</option>`).join('')}
+                    </select>
+                </td>
+            `;
+        });
+    } else {
+        attributeCells = `
+            <td><input type="text" placeholder="Attribute Name" class="form-control form-control-sm manual-attr-name" style="width: 100px;"></td>
+            <td><input type="text" placeholder="Value" class="form-control form-control-sm manual-attr-value" style="width: 100px;"></td>
+        `;
+    }
     
     let rowHtml = `<tr>
         <td><strong>${rowCount}</strong></td>
-        <td><input type="text" placeholder="Attribute" class="form-control form-control-sm" style="width: 100px;"></td>
-        <td><input type="text" placeholder="Value" class="form-control form-control-sm" style="width: 100px;"></td>
-        <td><input type="text" name="variants[${variantCounter}][sku]" class="form-control form-control-sm sku-input" style="width: 140px;" placeholder="SKU" required></td>
+        ${attributeCells}
+        <td><input type="text" name="variants[${variantCounter}][sku]" value="${uniqueSku}" class="form-control form-control-sm sku-input" style="width: 140px;" required></td>
         <td><input type="number" name="variants[${variantCounter}][price]" class="form-control form-control-sm price-input" style="width: 100px;" step="0.01" placeholder="Price" required></td>
         <td><input type="number" name="variants[${variantCounter}][sale_price]" class="form-control form-control-sm sale-price-input" style="width: 100px;" step="0.01" placeholder="Sale Price"></td>
         <td><input type="number" name="variants[${variantCounter}][stock]" class="form-control form-control-sm stock-input" style="width: 80px;" placeholder="Stock" required></td>
@@ -690,6 +778,28 @@ function addManualVariantRow() {
     </tr>`;
     
     tbody.append(rowHtml);
+    
+    // Handle manual attribute selection change to update hidden fields
+    if (availableAttributes.length > 0) {
+        const row = tbody.children().last();
+        row.find('.manual-attr-select').each(function() {
+            $(this).on('change', function() {
+                const selectedOption = $(this).find('option:selected');
+                const valueId = $(this).val();
+                const attrId = $(this).data('attr-id');
+                if (valueId) {
+                    let hiddenInput = row.find(`input[data-attr-id="${attrId}"]`);
+                    if (hiddenInput.length === 0) {
+                        hiddenInput = $(`<input type="hidden" name="variants[${variantCounter}][attribute_values][]" value="${valueId}" data-attr-id="${attrId}">`);
+                        row.append(hiddenInput);
+                    } else {
+                        hiddenInput.val(valueId);
+                    }
+                }
+            });
+        });
+    }
+    
     variantCounter++;
     $('#variantsTable').show();
     $('#noVariantsMsg').hide();
