@@ -314,7 +314,7 @@
                         <div class="images-grid" id="existingImagesGrid">
                             @foreach($product->images as $image)
                             <div class="image-preview-container existing-image" data-image-id="{{ $image->id }}">
-                                <img src="{{ Storage::url($image->image_path) }}" alt="Product Image">
+                                <img src="{{ Storage::disk('public')->url($image->image_path) }}" alt="Product Image">
                                 <button type="button" class="remove-image-btn remove-existing-image" data-id="{{ $image->id }}">×</button>
                                 @if($image->is_primary)
                                     <div class="primary-badge">Primary</div>
