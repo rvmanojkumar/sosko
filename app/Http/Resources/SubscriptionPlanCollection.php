@@ -1,4 +1,3 @@
-// app/Http/Resources/SubscriptionPlanCollection.php
 <?php
 
 namespace App\Http\Resources;

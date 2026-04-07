@@ -34,10 +34,6 @@ class ProductVariantResource extends JsonResource
                     ];
                 });
             }),
-            'images' => $this->when($this->images, function() {
-                return is_array($this->images) ? $this->images : json_decode($this->images, true);
-            }),
-            'supplier' => new SupplierResource($this->whenLoaded('supplier')),
             'created_at' => $this->created_at ? $this->created_at->toISOString() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toISOString() : null,
         ];

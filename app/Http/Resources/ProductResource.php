@@ -9,6 +9,8 @@ class ProductResource extends JsonResource
 {
     public function toArray($request)
     {
+        $defaultVariant = $this->defaultVariant;
+        
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -31,9 +33,9 @@ class ProductResource extends JsonResource
                 ];
             }),
             'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),
-            'price' => (float) ($this->default_variant->price ?? 0),
-            'sale_price' => $this->default_variant->sale_price ? (float) $this->default_variant->sale_price : null,
-            'current_price' => (float) ($this->default_variant->current_price ?? 0),
+            'price' => $defaultVariant ? (float) $defaultVariant->price : 0,
+            'sale_price' => $defaultVariant && $defaultVariant->sale_price ? (float) $defaultVariant->sale_price : null,
+            'current_price' => $defaultVariant ? (float) $defaultVariant->current_price : 0,
             'stock_quantity' => (int) $this->variants->sum('stock_quantity'),
             'average_rating' => (float) $this->average_rating,
             'review_count' => (int) $this->review_count,
