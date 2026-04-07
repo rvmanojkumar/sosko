@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Http\Resources\CategoryResource;
 use App\Models\Attribute;
 use App\Models\AttributeGroup;
 use Illuminate\Http\Request;

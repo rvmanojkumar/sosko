@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use App\Helpers\StorageHelper;
 
+
 class CategoryController extends Controller
 {
     public function index(Request $request)
