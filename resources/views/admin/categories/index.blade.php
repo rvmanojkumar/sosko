@@ -42,7 +42,7 @@
                     <td>{{ $category->id }}</td>
                     <td>
                         @if($category->icon)
-                            <img src="{{ Storage::url($category->icon) }}" width="40" height="40" style="object-fit: cover;">
+                            <img src="{{ Storage::disk('public')->url$category->icon) }}" width="40" height="40" style="object-fit: cover;">
                         @else
                             <i class="fas fa-folder fa-2x text-muted"></i>
                         @endif
