@@ -13,9 +13,21 @@ class Product extends Model
     use HasFactory, HasUuids, SoftDeletes, Auditable;
 
     protected $fillable = [
-        'vendor_id', 'category_id', 'supplier_id', 'name', 'slug', 'description',
-        'short_description', 'brand', 'weight', 'specifications', 'is_featured',
-        'is_active', 'view_count', 'sold_count', 'seo_data'
+        'vendor_id',
+        'category_id',
+        'supplier_id',
+        'name',
+        'slug',
+        'description',
+        'short_description',
+        'brand',
+        'weight',
+        'specifications',
+        'is_featured',
+        'is_active',
+        'view_count',
+        'sold_count',
+        'seo_data'
     ];
 
     protected $casts = [
@@ -91,6 +103,45 @@ class Product extends Model
     }
 
     /**
+     * Get the questions for the product
+     */
+    public function questions()
+    {
+        return $this->hasMany(ProductQuestion::class);
+    }
+
+    /**
+     * Get answered questions
+     */
+    public function answeredQuestions()
+    {
+        return $this->questions()->where('is_answered', true);
+    }
+
+    /**
+     * Get unanswered questions
+     */
+    public function unansweredQuestions()
+    {
+        return $this->questions()->where('is_answered', false);
+    }
+
+    /**
+     * Get the order items for this product
+     */
+    public function orderItems()
+    {
+        return $this->hasManyThrough(
+            OrderItem::class,
+            ProductVariant::class,
+            'product_id',
+            'product_variant_id',
+            'id',
+            'id'
+        );
+    }
+
+    /**
      * Get average rating
      */
     public function getAverageRatingAttribute()
@@ -118,21 +169,6 @@ class Product extends Model
         }
         
         return $distribution;
-    }
-
-    /**
-     * Get the order items for this product
-     */
-    public function orderItems()
-    {
-        return $this->hasManyThrough(
-            OrderItem::class,
-            ProductVariant::class,
-            'product_id',
-            'product_variant_id',
-            'id',
-            'id'
-        );
     }
 
     /**
