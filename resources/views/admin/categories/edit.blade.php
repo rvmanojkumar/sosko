@@ -59,7 +59,7 @@
                         <label>Icon Image</label>
                         @if($category->icon)
                             <div class="mb-2">
-                                <img src="{{ Storage::url($category->icon) }}" width="50" height="50" class="img-thumbnail">
+                                <img src="{{ Storage::disk('public')->url($category->icon) }}" width="50" height="50" class="img-thumbnail">
                             </div>
                         @endif
                         <input type="file" name="icon" class="form-control-file" accept="image/*">
