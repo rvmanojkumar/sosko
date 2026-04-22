@@ -104,14 +104,14 @@ class ProductVariant extends Model
         }
         
         // Check for flash sale
-        $flashSale = $this->flashSales()
-            ->where('flash_sales.start_time', '<=', now())
-            ->where('flash_sales.end_time', '>=', now())
-            ->first();
+        // $flashSale = $this->flashSales()
+        //     ->where('flash_sales.start_time', '<=', now())
+        //     ->where('flash_sales.end_time', '>=', now())
+        //     ->first();
             
-        if ($flashSale && $flashSale->pivot->flash_price) {
-            return $flashSale->pivot->flash_price;
-        }
+        // if ($flashSale && $flashSale->pivot->flash_price) {
+        //     return $flashSale->pivot->flash_price;
+        // }
         
         // Check for sale of the day
         $saleOfDay = SaleOfTheDay::where('product_variant_id', $this->id)
