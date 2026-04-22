@@ -114,13 +114,13 @@ class ProductVariant extends Model
         // }
         
         // Check for sale of the day
-        $saleOfDay = SaleOfTheDay::where('product_variant_id', $this->id)
-            ->where('sale_date', now()->toDateString())
-            ->first();
+        //$saleOfDay = SaleOfTheDay::where('product_variant_id', $this->id)
+        //    ->where('sale_date', now()->toDateString())
+        //    ->first();
             
-        if ($saleOfDay && $saleOfDay->special_price) {
-            return $saleOfDay->special_price;
-        }
+        // if ($saleOfDay && $saleOfDay->special_price) {
+        //     return $saleOfDay->special_price;
+        // }
         
         return $this->price;
     }
