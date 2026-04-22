@@ -20,38 +20,63 @@ use App\Helpers\StorageHelper;
 class ProductController extends Controller
 {
     public function index(Request $request)
-    {
-        $products = Product::query()
-            ->with(['variants', 'images', 'category'])
-            ->where('is_active', true)
-            ->when($request->category_id, function ($query, $categoryId) {
-                $query->where('category_id', $categoryId);
-            })
-            ->when($request->vendor_id, function ($query, $vendorId) {
-                $query->where('vendor_id', $vendorId);
-            })
-            ->when($request->search, function ($query, $search) {
-                $query->whereFullText(['name', 'description'], $search);
-            })
-            ->when($request->min_price, function ($query, $minPrice) {
-                $query->whereHas('variants', function ($q) use ($minPrice) {
-                    $q->where('price', '>=', $minPrice);
-                });
-            })
-            ->when($request->max_price, function ($query, $maxPrice) {
-                $query->whereHas('variants', function ($q) use ($maxPrice) {
-                    $q->where('price', '<=', $maxPrice);
-                });
-            })
-            ->when($request->rating, function ($query, $rating) {
-                $query->having('average_rating', '>=', $rating);
-            })
-            ->withAvg('reviews as average_rating', 'rating')
-            ->orderBy($request->sort_by ?? 'created_at', $request->sort_order ?? 'desc')
-            ->paginate($request->per_page ?? 20);
-            
-        return ProductResource::collection($products);
+{
+    // ✅ Allowed sortable columns (adjust as needed)
+    $allowedSortFields = ['created_at', 'name', 'price', 'average_rating'];
+
+    // ✅ Sanitize sort_by
+    $sortBy = $request->sort_by;
+    if (!in_array($sortBy, $allowedSortFields)) {
+        $sortBy = 'created_at';
     }
+
+    // ✅ Sanitize sort_order
+    $sortOrder = strtolower($request->sort_order ?? 'desc');
+    if (!in_array($sortOrder, ['asc', 'desc'])) {
+        $sortOrder = 'desc';
+    }
+
+    $products = Product::query()
+        ->with(['variants', 'images', 'category'])
+        ->where('is_active', true)
+
+        ->when($request->category_id, function ($query, $categoryId) {
+            $query->where('category_id', $categoryId);
+        })
+
+        ->when($request->vendor_id, function ($query, $vendorId) {
+            $query->where('vendor_id', $vendorId);
+        })
+
+        ->when($request->search, function ($query, $search) {
+            $query->whereFullText(['name', 'description'], $search);
+        })
+
+        ->when($request->min_price, function ($query, $minPrice) {
+            $query->whereHas('variants', function ($q) use ($minPrice) {
+                $q->where('price', '>=', $minPrice);
+            });
+        })
+
+        ->when($request->max_price, function ($query, $maxPrice) {
+            $query->whereHas('variants', function ($q) use ($maxPrice) {
+                $q->where('price', '<=', $maxPrice);
+            });
+        })
+
+        ->withAvg('reviews as average_rating', 'rating')
+
+        ->when($request->rating, function ($query, $rating) {
+            $query->having('average_rating', '>=', $rating);
+        })
+
+        // ✅ Safe orderBy
+        ->orderBy($sortBy, $sortOrder)
+
+        ->paginate($request->per_page ?? 20);
+
+    return ProductResource::collection($products);
+}
 
     public function store(ProductRequest $request)
     {
