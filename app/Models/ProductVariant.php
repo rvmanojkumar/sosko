@@ -196,12 +196,12 @@ class ProductVariant extends Model
     /**
      * Get all flash sales for this variant
      */
-    public function flashSales()
-    {
-        return $this->belongsToMany(FlashSale::class, 'flash_sale_products')
-                    ->withPivot('flash_price', 'quantity_limit', 'sold_count')
-                    ->withTimestamps();
-    }
+    // public function flashSales()
+    // {
+    //     return $this->belongsToMany(FlashSale::class, 'flash_sale_products')
+    //                 ->withPivot('flash_price', 'quantity_limit', 'sold_count')
+    //                 ->withTimestamps();
+    // }
 
     /**
      * Scope for active variants
